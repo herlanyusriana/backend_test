@@ -1,0 +1,196 @@
+{
+  "info": {
+    "name": "Mini Order Checkout API",
+    "description": "Koleksi endpoint technical test PT OkaIki Indonesia. Jalankan checkout terlebih dahulu agar variabel order_id terisi otomatis.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000/api"
+    },
+    {
+      "key": "order_id",
+      "value": "1"
+    },
+    {
+      "key": "idempotency_key",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List Active Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products?seller_id=10",
+              "host": ["{{base_url}}"],
+              "path": ["products"],
+              "query": [
+                { "key": "seller_id", "value": "10", "disabled": true }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/products/101",
+              "host": ["{{base_url}}"],
+              "path": ["products", "101"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Checkout",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('idempotency_key', pm.variables.replaceIn('{{$guid}}'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Checkout berhasil', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.eql(true);",
+                  "    pm.collectionVariables.set('order_id', body.data.order_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{idempotency_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"seller_id\": 10,\n  \"shipping_cost\": 15000,\n  \"items\": [\n    {\n      \"product_id\": 101,\n      \"quantity\": 2\n    },\n    {\n      \"product_id\": 102,\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Checkout Error - Different Seller",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Produk beda seller ditolak dengan response yang jelas', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.success).to.eql(false);",
+                  "    pm.expect(body.message).to.eql('Semua produk harus berasal dari seller yang dipilih.');",
+                  "    pm.expect(body.errors['items.1.product_id'][0]).to.eql('Produk bukan milik seller yang dipilih.');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": 1,\n  \"seller_id\": 10,\n  \"shipping_cost\": 15000,\n  \"items\": [\n    {\n      \"product_id\": 101,\n      \"quantity\": 1\n    },\n    {\n      \"product_id\": 201,\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/orders/checkout",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "checkout"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "cancel"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Order Paid",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/orders/{{order_id}}/mark-paid",
+              "host": ["{{base_url}}"],
+              "path": ["orders", "{{order_id}}", "mark-paid"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
