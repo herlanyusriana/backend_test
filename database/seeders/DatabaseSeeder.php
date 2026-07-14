@@ -63,6 +63,17 @@ class DatabaseSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'id' => 104,
+                'seller_id' => 10,
+                'name' => 'Produk Stok Terbatas',
+                'sku' => 'SKU-LIMITED',
+                'price' => '30000.00',
+                'stock' => 1,
+                'status' => ProductStatus::Active->value,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
                 'id' => 201,
                 'seller_id' => 20,
                 'name' => 'Produk Seller Lain',

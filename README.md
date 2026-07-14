@@ -44,7 +44,20 @@ docker compose up -d
 
 Konfigurasi `.env.example` sudah cocok dengan container tersebut. Volume `postgres-data` menjaga data tetap tersedia setelah container dihentikan.
 
-Seeder menyediakan customer `1`, seller `10` dengan produk aktif `101`/`102` dan produk nonaktif `103`. Seller kedua `20` dengan produk aktif `201` disediakan untuk menguji response checkout beda seller.
+Seeder menyediakan data minimum yang memudahkan pengujian:
+
+| Jenis | ID | Kondisi/penggunaan |
+|---|---:|---|
+| Customer | `1` | Customer demo untuk seluruh flow order |
+| Seller | `10` | Seller utama dengan produk aktif, nonaktif, dan stok terbatas |
+| Seller | `20` | Seller pembanding untuk menguji checkout beda seller |
+| Produk | `101` | Aktif, stok cukup, harga `100000.00` |
+| Produk | `102` | Aktif, stok cukup, harga `50000.00` |
+| Produk | `103` | Nonaktif untuk menguji validasi status produk |
+| Produk | `104` | Aktif dengan stok `1` untuk menguji stok terbatas |
+| Produk | `201` | Aktif tetapi milik seller `20` untuk menguji seller berbeda |
+
+Gunakan produk `101` dan `102` untuk checkout normal, produk `103` untuk error inactive, produk `104` dengan quantity lebih dari `1` untuk error stok, serta produk `201` bersama seller `10` untuk error beda seller. Order hasil checkout normal dapat langsung dipakai menguji endpoint cancel atau mark-paid.
 
 Spesifikasi lengkap tersedia di [`docs/openapi.yaml`](docs/openapi.yaml). Untuk pengujian manual, impor [`docs/Mini_Order_Checkout_API.postman_collection.json`](docs/Mini_Order_Checkout_API.postman_collection.json) ke Postman; `order_id` akan terisi otomatis setelah checkout.
 
