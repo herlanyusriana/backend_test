@@ -1,0 +1,339 @@
+openapi: 3.1.0
+info:
+  title: Mini Order Checkout API
+  version: 1.0.0
+  description: REST API checkout satu seller dengan locking stok dan status order.
+servers:
+  - url: http://127.0.0.1:8000/api
+paths:
+  /products:
+    get:
+      summary: Daftar produk aktif
+      parameters:
+        - in: query
+          name: seller_id
+          schema:
+            type: integer
+          description: Filter opsional berdasarkan seller.
+      responses:
+        "200":
+          description: Daftar produk berhasil diambil.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Product"
+  /products/{id}:
+    get:
+      summary: Detail produk
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+      responses:
+        "200":
+          description: Detail produk berhasil diambil.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Product"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /orders/checkout:
+    post:
+      summary: Checkout pesanan
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+          description: Mencegah order ganda saat request diulang.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutRequest"
+            example:
+              customer_id: 1
+              seller_id: 10
+              shipping_cost: 15000
+              items:
+                - product_id: 101
+                  quantity: 2
+                - product_id: 102
+                  quantity: 1
+      responses:
+        "201":
+          description: Order baru berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Order"
+        "200":
+          description: Order dari Idempotency-Key yang sama dikembalikan.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Order"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /orders/{id}:
+    get:
+      summary: Detail order
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+      responses:
+        "200":
+          description: Detail order berhasil diambil.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /orders/{id}/cancel:
+    post:
+      summary: Batalkan order pending payment
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+      responses:
+        "200":
+          description: Order berhasil dibatalkan dan stok dikembalikan.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /orders/{id}/mark-paid:
+    post:
+      summary: Tandai order sebagai paid
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+      responses:
+        "200":
+          description: Order berhasil ditandai paid.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/SuccessEnvelope"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+components:
+  parameters:
+    ResourceId:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+  responses:
+    NotFound:
+      description: Resource tidak ditemukan.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    Conflict:
+      description: Konflik idempotency atau transisi status.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+    ValidationError:
+      description: Validasi atau business rule gagal.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        data: {}
+    ErrorEnvelope:
+      type: object
+      required: [success, message, errors]
+      properties:
+        success:
+          type: boolean
+          const: false
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    Product:
+      type: object
+      required: [id, seller_id, name, sku, price, stock, status]
+      properties:
+        id:
+          type: integer
+        seller_id:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: string
+        price:
+          type: string
+          pattern: "^[0-9]+\\.[0-9]{2}$"
+          example: "100000.00"
+        stock:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum: [active, inactive]
+    CheckoutRequest:
+      type: object
+      required: [customer_id, seller_id, shipping_cost, items]
+      properties:
+        customer_id:
+          type: integer
+          minimum: 1
+        seller_id:
+          type: integer
+          minimum: 1
+        shipping_cost:
+          oneOf:
+            - type: number
+              minimum: 0
+            - type: string
+              pattern: "^[0-9]+(\\.[0-9]{1,2})?$"
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [product_id, quantity]
+            properties:
+              product_id:
+                type: integer
+                minimum: 1
+              quantity:
+                type: integer
+                minimum: 1
+    OrderItem:
+      type: object
+      required: [product_id, product_name, sku, price, quantity, subtotal]
+      properties:
+        product_id:
+          type: integer
+        product_name:
+          type: string
+        sku:
+          type: string
+        price:
+          type: string
+        quantity:
+          type: integer
+        subtotal:
+          type: string
+    StatusLog:
+      type: object
+      properties:
+        from_status:
+          type: [string, "null"]
+        to_status:
+          type: string
+        actor_type:
+          type: string
+        actor_id:
+          type: [integer, "null"]
+        notes:
+          type: [string, "null"]
+        metadata:
+          type: [object, "null"]
+        created_at:
+          type: [string, "null"]
+          format: date-time
+    Order:
+      type: object
+      required:
+        - order_id
+        - order_code
+        - customer_id
+        - seller_id
+        - status
+        - subtotal
+        - shipping_cost
+        - total
+        - items
+        - status_logs
+      properties:
+        order_id:
+          type: integer
+        order_code:
+          type: string
+          example: ORD-20260710-A1B2C3D4
+        customer_id:
+          type: integer
+        seller_id:
+          type: integer
+        status:
+          type: string
+          enum: [pending_payment, paid, cancelled]
+        subtotal:
+          type: string
+        shipping_cost:
+          type: string
+        total:
+          type: string
+        cancelled_at:
+          type: [string, "null"]
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        status_logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusLog"
