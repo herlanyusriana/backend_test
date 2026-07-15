@@ -59,7 +59,28 @@ Seeder menyediakan data minimum yang memudahkan pengujian:
 
 Gunakan produk `101` dan `102` untuk checkout normal, produk `103` untuk error inactive, produk `104` dengan quantity lebih dari `1` untuk error stok, serta produk `201` bersama seller `10` untuk error beda seller. Order hasil checkout normal dapat langsung dipakai menguji endpoint cancel atau mark-paid.
 
-Spesifikasi lengkap tersedia di [`docs/openapi.yaml`](docs/openapi.yaml). Untuk pengujian manual, impor [`docs/Mini_Order_Checkout_API.postman_collection.json`](docs/Mini_Order_Checkout_API.postman_collection.json) ke Postman; `order_id` akan terisi otomatis setelah checkout.
+Spesifikasi OpenAPI lengkap tersedia di [`docs/openapi.yaml`](docs/openapi.yaml).
+
+## Postman Collection
+
+File Postman Collection berada di:
+
+```text
+docs/Mini_Order_Checkout_API.postman_collection.json
+```
+
+File dapat dibuka langsung melalui tautan berikut: [`docs/Mini_Order_Checkout_API.postman_collection.json`](docs/Mini_Order_Checkout_API.postman_collection.json).
+
+Cara menggunakannya:
+
+1. Jalankan aplikasi dengan `php artisan serve`.
+2. Buka Postman, kemudian pilih **Import**.
+3. Pilih file `docs/Mini_Order_Checkout_API.postman_collection.json` dari root project.
+4. Pastikan collection variable `base_url` bernilai `http://127.0.0.1:8000/api`.
+5. Jalankan request **Checkout** terlebih dahulu. Script Postman akan menyimpan ID order hasil checkout ke variable `order_id` secara otomatis.
+6. Gunakan request **Get Order**, **Cancel Order**, atau **Mark Order Paid**. Buat checkout baru jika ingin mencoba flow cancel dan paid secara terpisah.
+
+Collection juga menyediakan request **Checkout Error - Different Seller** untuk membuktikan response validasi ketika item berasal dari seller lain. Nilai `Idempotency-Key` dibuat otomatis sebelum request checkout.
 
 ## Relasi database
 
